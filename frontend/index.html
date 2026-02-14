@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Crop Disease Detector</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f0f4f7;
+      color: #333;
+    }
+    header {
+      background: #2e7d32;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    video {
+      width: 100%;
+      border-radius: 12px;
+      margin-top: 10px;
+      display: none;
+    }
+    canvas { display: none; }
+    .container {
+      max-width: 800px;
+      margin: 20px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    h2 { color: #2e7d32; }
+    input, button {
+      margin: 10px 0;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #2e7d32;
+      color: white;
+      cursor: pointer;
+      border: none;
+    }
+    button:hover { background: #256628; }
+    .preview {
+      margin-top: 15px;
+      text-align: center;
+    }
+    .preview img {
+      max-width: 300px;
+      border-radius: 10px;
+      border: 2px solid #ccc;
+    }
+    .warning {
+      color: red;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    .history-card {
+      background: #f9f9f9;
+      border-left: 5px solid #2e7d32;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 8px;
+    }
+    #loading {
+      display: none;
+      color: #2e7d32;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+  </style>
+  <script>
+    let capturedBlob = null;
+    let currentPhone = null;
+    const API_URL = "http://127.0.0.1:8000";
+
+    // Start camera
+    function startCamera() {
+      const video = document.getElementById("camera");
+      video.style.display = "block";
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => video.srcObject = stream)
+        .catch(err => alert("Camera error: " + err));
+    }
+
+    // Capture image
+    function captureImage() {
+      const video = document.getElementById("camera");
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+
+      canvas.toBlob(blob => {
+        capturedBlob = blob;
+        const url = URL.createObjectURL(capturedBlob);
+        document.getElementById("previewImg").src = url;
+        document.getElementById("preview").style.display = "block";
+        alert("✅ Image captured!");
+      }, "image/jpeg");
+    }
+
+    // Login user
+    async function loginUser() {
+      const phone = document.getElementById("phone").value;
+      if (!phone) { alert("Enter phone number"); return; }
+      const res = await fetch(`${API_URL}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone })
+      });
+      const data = await res.json();
+      alert(data.message);
+      currentPhone = phone;
+      document.getElementById("login-section").style.display = "none";
+      document.getElementById("app-section").style.display = "block";
+      loadHistory();
+    }
+
+    // Preview for uploaded file
+    function showPreview(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          document.getElementById("previewImg").src = e.target.result;
+          document.getElementById("preview").style.display = "block";
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    // Predict disease
+    async function predictDisease() {
+      const fileInput = document.getElementById("imageUpload");
+      const resultDiv = document.getElementById("result");
+      const loadingText = document.getElementById("loading");
+
+      resultDiv.style.display = "none";
+      loadingText.style.display = "block";
+
+      const formData = new FormData();
+      if (capturedBlob) {
+        formData.append("file", capturedBlob, "captured.jpg");
+      } else if (fileInput.files.length) {
+        formData.append("file", fileInput.files[0]);
+      } else {
+        loadingText.style.display = "none";
+        alert("Upload or capture an image first");
+        return;
+      }
+
+      const res = await fetch(`${API_URL}/predict/${currentPhone}`, {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      loadingText.style.display = "none";
+      resultDiv.style.display = "block";
+
+      const accuracy = (data.probability * 100).toFixed(2);
+      let resultHTML = `
+        <h3>Prediction: ${data.disease}</h3>
+        <p><b>Prediction Accuracy:</b> ${accuracy}%</p>
+        <p><b>Suggested Remedy:</b> ${data.remedy}</p>
+      `;
+      if (accuracy < 60) {
+        resultHTML += `<p class="warning">⚠️ Low accuracy! Please try re-uploading a clearer image.</p>`;
+      }
+      resultDiv.innerHTML = resultHTML;
+
+      loadHistory();
+    }
+
+    // Load history
+    async function loadHistory() {
+      const res = await fetch(`${API_URL}/history/${currentPhone}`);
+      const data = await res.json();
+      const historyDiv = document.getElementById("history");
+      historyDiv.innerHTML = "<h3>Disease History</h3>";
+      if (data.history.length === 0) {
+        historyDiv.innerHTML += "<p>No records yet.</p>";
+        return;
+      }
+      data.history.forEach((h, i) => {
+        historyDiv.innerHTML += `
+          <div class="history-card">
+            <b>${i+1}. Disease:</b> ${h.disease} <br>
+            <b>Prediction Accuracy:</b> ${(h.confidence * 100).toFixed(2)}% <br>
+            <b>Remedy:</b> ${h.remedy}
+          </div>
+        `;
+      });
+    }
+  </script>
+</head>
+<body>
+  <header>🌱 Crop Disease Detector</header>
+  <div class="container">
+
+    <!-- Login Section -->
+    <div id="login-section">
+      <h2>Farmer Login</h2>
+      <input type="text" id="phone" placeholder="Enter phone number">
+      <br>
+      <button onclick="loginUser()">Login</button>
+    </div>
+
+    <!-- App Section -->
+    <div id="app-section" style="display:none;">
+      <h2>Upload or Capture Image</h2>
+      <input type="file" id="imageUpload" accept="image/*" capture="environment" onchange="showPreview(event)">
+      
+      <!-- Camera Capture -->
+      <button onclick="startCamera()">📷 Open Camera</button>
+      <video id="camera" autoplay playsinline></video>
+      <button onclick="captureImage()">📸 Capture</button>
+      <canvas id="canvas"></canvas>
+
+      <div id="preview" class="preview" style="display:none;">
+        <h4>Preview:</h4>
+        <img id="previewImg" src="">
+      </div>
+
+      <br>
+      <button onclick="predictDisease()">Predict</button>
+      <p id="loading">⏳ Processing...</p>
+      <div id="result" style="margin-top:20px;"></div>
+      <hr>
+      <div id="history"></div>
+    </div>
+  </div>
+</body>
+</html>
