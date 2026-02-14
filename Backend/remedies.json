@@ -1,0 +1,15 @@
+{
+  "Tomato__Target_Spot": "Apply Mancozeb or chlorothalonil fungicide weekly.",
+  "Tomato__Tomato_mosaic_virus": "Remove infected plants. Disinfect tools. Use resistant varieties.",
+  "Tomato__Tomato_YellowLeaf__Curl_Virus": "Control whiteflies. Remove infected plants. Use resistant varieties.",
+  "Tomato_Bacterial_spot": "Apply copper-based bactericides. Avoid overhead irrigation.",
+  "Tomato_Early_blight": "Spray Mancozeb or chlorothalonil. Practice crop rotation.",
+  "Tomato_healthy": "No disease detected. Maintain good plant care.",
+  "Tomato_Late_blight": "Apply chlorothalonil or copper fungicide. Avoid wet foliage.",
+  "Tomato_Leaf_Mold": "Ensure good ventilation. Apply copper fungicide if necessary.",
+  "Tomato_Septoria_leaf_spot": "Remove infected leaves. Apply fungicide such as chlorothalonil.",
+  "Tomato_Spider_mites_Two_spotted_spider_mite": "Spray insecticidal soap or neem oil weekly.",
+  "Potato___Early_blight": "Spray Mancozeb fungicide every 7 to 10 days.",
+  "Pepper__bell___Bacterial_spot": "Apply copper-based fungicide weekly.",
+  "Tomato__Other": "General care: Remove infected parts, improve ventilation, apply appropriate treatment."
+}
